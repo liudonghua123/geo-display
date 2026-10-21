@@ -1,5 +1,5 @@
 <template>
-  <div class="search-box" :class="{ open: !!results.length }">
+  <div class="search-box">
     <input
       class="search-input"
       type="text"

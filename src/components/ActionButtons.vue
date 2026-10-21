@@ -28,4 +28,8 @@ defineEmits<{ home: []; locate: [] }>()
 }
 .action-btn:hover:not(:disabled) { border-color: var(--accent); }
 .action-btn:disabled { opacity: 0.45; cursor: default; }
+
+@media (max-width: 767px) {
+  .action-btn { width: 34px; height: 34px; font-size: 14px; }
+}
 </style>

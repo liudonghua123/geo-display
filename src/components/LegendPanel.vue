@@ -12,9 +12,15 @@
 import { computed } from 'vue'
 import { getDataset, buildVisualMap } from '../datasets/providers'
 
-const props = defineProps<{ datasetId: string }>()
+const props = defineProps<{ datasetId: string; currentLevel: 'country' | 'province' | 'city' | 'district' }>()
 
-const vm = computed(() => buildVisualMap(props.datasetId))
+const vm = computed(() => {
+  const ds = getDataset(props.datasetId)
+  const level = props.currentLevel === 'country' ? 'province' : props.currentLevel
+  // 当前层级无数据（如 city/district 层的 area 数据集）时隐藏图例
+  if (!ds.getData(level)) return null
+  return buildVisualMap(props.datasetId)
+})
 const title = computed(() => {
   const ds = getDataset(props.datasetId)
   return ds.legend.unit ? `${ds.legend.label}（${ds.legend.unit}）` : ds.legend.label

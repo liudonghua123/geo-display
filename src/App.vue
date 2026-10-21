@@ -18,7 +18,7 @@
     </header>
 
     <div class="bottom-left">
-      <LegendPanel :dataset-id="datasetId" />
+      <LegendPanel :dataset-id="datasetId" :current-level="current.level" />
     </div>
     <div class="bottom-right">
       <ActionButtons :at-root="current.level === 'country'" :locating="locateState === 'locating'"
@@ -88,7 +88,7 @@ async function onSearchSelect(meta: RegionMeta) {
 }
 
 async function onLocate() {
-  const chain = await locate(current.value.adcode)
+  const chain = await locate(100000)
   if (locateState.value === 'denied') return showToast('定位权限被拒绝，请在浏览器中允许定位')
   if (locateState.value === 'failed') return showToast('定位失败，请重试')
   if (!chain.length) return showToast('无法确定所在区域')
@@ -180,6 +180,5 @@ onMounted(() => {
   .top-left { width: 100%; }
   .top-left :first-child { width: 100%; }
   .top-bar { flex-wrap: wrap; }
-  .action-btn { width: 34px; height: 34px; font-size: 14px; }
 }
 </style>

@@ -78,6 +78,7 @@ async function loadAndRender() {
       }
     })
 
+    // 仅用于 tooltip 单位；图例由 LegendPanel 呈现，不再传入 ECharts visualMap
     const visualMap = values ? buildVisualMap(props.datasetId) : null
 
     chart.setOption(
@@ -92,15 +93,6 @@ async function loadAndRender() {
               : params.name
           },
         },
-        visualMap: visualMap
-          ? {
-              type: 'piecewise',
-              left: 'left',
-              bottom: 'bottom',
-              pieces: visualMap.pieces,
-              textStyle: { color: getComputedStyle(document.documentElement).getPropertyValue('--text') || '#ccc' },
-            }
-          : undefined,
         series: [
           {
             type: 'map',
