@@ -21,6 +21,7 @@
     "@vue/test-utils": "^2.4.6",
     "jsdom": "^25.0.1",
     "mapshaper": "^0.6.102",
+    "ora": "^9.4.1",
     "pinyin-pro": "^3.26.0",
     "typescript": "~5.6.3",
     "vite": "^6.0.5",

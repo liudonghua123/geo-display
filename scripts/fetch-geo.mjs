@@ -10,6 +10,7 @@ import { mkdir, writeFile, readdir, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pinyin } from 'pinyin-pro'
+import ora from 'ora'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -78,6 +79,9 @@ function toMeta(feature, level, parentAdcode, parentName) {
   }
 }
 
+/** 统计抓取的文件/请求数，供 spinner 显示 */
+const stats = { files: 0, requests: 0 }
+
 async function main() {
   await rm(OUT_DIR, { recursive: true, force: true }) // 清理上次输出，避免污染 manifest
   await mkdir(OUT_DIR, { recursive: true })
@@ -85,12 +89,22 @@ async function main() {
   const manifest = { generatedAt: new Date().toISOString(), simplified: SIMPLIFY_PCT < 1 ? SIMPLIFY_PCT : null, files: {} }
   const skipped = []
 
-  console.log('1/3 抓取省级数据…')
+  // 步骤 1/3：省级
+  const s1 = ora({ text: '抓取省级数据…', stream: process.stderr }).start()
   const country = await fetchJson(`${BASE}/100000_full.json`)
+  stats.requests++
   const provinces = country.features.filter((f) => f.properties.name) // 过滤 100000_JD 占位
   await writeGeo('100000_full', country)
+  stats.files++
+  s1.succeed(`省级：${provinces.length} 个省级行政区，${provinces.filter((p) => p.properties.childrenNum > 0).length} 个有下钻数据`)
 
-  console.log(`2/3 抓取 ${provinces.length} 个省的市级数据…`)
+  // 步骤 2/3：市级
+  const withDrill = provinces.filter((p) => p.properties.childrenNum > 0)
+  const s2 = ora({
+    text: '抓取市级数据…',
+    stream: process.stderr,
+  }).start()
+  let provDone = 0
   const cityTasks = []
   for (const prov of provinces) {
     const p = prov.properties
@@ -98,19 +112,28 @@ async function main() {
     if (p.childrenNum === 0) { skipped.push(`${p.name}(无下钻)`); continue }
     cityTasks.push((async () => {
       const cities = await fetchJson(`${BASE}/${p.adcode}_full.json`)
-      if (!cities) { skipped.push(`${p.name}(_full 404)`); return [] }
+      stats.requests++
+      if (!cities) { skipped.push(`${p.name}(_full 404)`); provDone++; s2.text = progress(provDone, withDrill.length, p.name); return [] }
       await writeGeo(`${p.adcode}_full`, cities)
+      stats.files++
       // 省级自身边界（定位跳转用）
       const provSelf = await fetchJson(`${BASE}/${p.adcode}.json`)
-      if (provSelf) await writeGeo(`${p.adcode}`, provSelf)
+      stats.requests++
+      if (provSelf) { await writeGeo(`${p.adcode}`, provSelf); stats.files++ }
+      provDone++
+      s2.text = progress(provDone, withDrill.length, p.name)
       return cities.features.filter((f) => f.properties.name)
     })())
     await sleep(120) // 限速
   }
   const provinceCityPairs = await Promise.all(cityTasks)
+  s2.succeed(`市级：${provinceCityPairs.flat().length} 个地级行政区`)
 
-  console.log('3/3 抓取区级数据…')
-  let done = 0
+  // 步骤 3/3：区级（逐市展示进度与当前区名）
+  const allCities = provinceCityPairs.flat()
+  const s3 = ora({ text: '抓取区级数据…', stream: process.stderr }).start()
+  let cityDone = 0
+  let districtCount = 0
   for (const cities of provinceCityPairs) {
     for (const city of cities) {
       const c = city.properties
@@ -118,35 +141,55 @@ async function main() {
         provinces.find((x) => x.properties.adcode === c.parent?.adcode)?.properties.name ?? ''))
       // 自身边界（定位跳转用，存为 {adcode}.json）：市级必抓
       const selfFc = await fetchJson(`${BASE}/${c.adcode}.json`)
-      if (selfFc) await writeGeo(`${c.adcode}`, selfFc)
-      if (c.childrenNum === 0) continue
+      stats.requests++
+      if (selfFc) { await writeGeo(`${c.adcode}`, selfFc); stats.files++ }
+      if (c.childrenNum === 0) {
+        cityDone++
+        s3.text = progress(cityDone, allCities.length, `${c.name}（无下级区划）`)
+        continue
+      }
       const districts = await fetchJson(`${BASE}/${c.adcode}_full.json`)
-      if (!districts) { skipped.push(`${c.name}(_full 404)`); continue }
+      stats.requests++
+      if (!districts) { skipped.push(`${c.name}(_full 404)`); cityDone++; s3.text = progress(cityDone, allCities.length, c.name); continue }
       await writeGeo(`${c.adcode}_full`, districts)
-      for (const d of districts.features.filter((f) => f.properties.name)) {
+      stats.files++
+      const districtFeatures = districts.features.filter((f) => f.properties.name)
+      districtCount += districtFeatures.length
+      for (const d of districtFeatures) {
         index.push(toMeta(d, 'district', c.adcode, c.name))
         // 区级自身边界（叶子节点定位展示用）
         const dSelf = await fetchJson(`${BASE}/${d.properties.adcode}.json`)
-        if (dSelf) await writeGeo(`${d.properties.adcode}`, dSelf)
+        stats.requests++
+        if (dSelf) { await writeGeo(`${d.properties.adcode}`, dSelf); stats.files++ }
+        // 实时显示当前市的区级抓取进度
+        const dDone = districtFeatures.indexOf(d) + 1
+        s3.text = progress(cityDone, allCities.length, `${c.name} › ${d.properties.name} ${dDone}/${districtFeatures.length}`)
         await sleep(60) // 限速
       }
+      cityDone++
+      s3.text = progress(cityDone, allCities.length, c.name)
       await sleep(60) // 限速
     }
-    done++
-    if (done % 10 === 0) console.log(`  ${done}/${provinceCityPairs.length}`)
-    await sleep(60)
   }
+  s3.succeed(`区级：${districtCount} 个县级行政区`)
 
   // manifest：记录已写入的文件，运行时用于判断数据是否存在
   for (const f of await readdir(OUT_DIR)) manifest.files[f] = true
 
+  const s4 = ora({ text: '写入搜索索引与清单…', stream: process.stderr }).start()
   await writeFile(path.join(OUT_DIR, 'search-index.json'),
     JSON.stringify(index.sort((a, b) => a.adcode - b.adcode)))
   await writeFile(path.join(OUT_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2))
+  s4.succeed(`索引 ${index.length} 条，manifest ${Object.keys(manifest.files).length} 个文件`)
 
   const geoCount = Object.keys(manifest.files).filter((f) => f.endsWith('_full.json')).length
-  console.log(`完成：${geoCount} 个 GeoJSON，${index.length} 条索引`)
+  ora().succeed(`完成：${geoCount} 个下钻 GeoJSON，共 ${stats.files} 个文件、${stats.requests} 次请求`)
   if (skipped.length) console.log(`跳过 ${skipped.length} 项：\n  ` + skipped.join('\n  '))
+}
+
+/** 进度文本：`(已处理/总数) 当前项` */
+function progress(done, total, current) {
+  return `(${done}/${total}) ${current}`
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })
