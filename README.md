@@ -35,7 +35,8 @@ npx vite build --base /geo-display/
 
 推送 main 分支会自动通过 GitHub Actions（`.github/workflows/deploy.yml`）
 发布到 GitHub Pages 项目页（`https://<user>.github.io/<repo>/`），
-workflow 会按仓库名自动设置 base。首次启用需在仓库
+workflow 会按仓库名自动设置 base，并在 CI 中重新抓取 GeoJSON 数据
+（首次构建约 10 分钟）。首次启用需在仓库
 Settings → Pages 中把 Source 设为 `gh-pages` 分支。
 
 ## 数据说明
