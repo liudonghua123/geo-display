@@ -69,16 +69,24 @@ async function loadAndRender() {
     const ds = getDataset(props.datasetId)
     const values = ds.getData(props.currentLevel === 'country' ? 'province' : props.currentLevel) as Record<number, number> | null
 
-    const seriesData = features.map((f, i) => {
+    const seriesData = features.map((f) => {
       const p = f.properties as { adcode: number; name: string; childrenNum: number }
       return {
         name: p.name,
         adcode: p.adcode,
         childrenNum: p.childrenNum,
         value: values?.[p.adcode] ?? undefined,
-        itemStyle: values ? undefined : { areaColor: regionColor(p.name, i) },
       }
     })
+
+    // geoIndex 绑定下，系列级 itemStyle/label 会被忽略（区域模型只来自 geo.regions），
+    // 因此无值模式（默认/彩虹/渐变）的逐区域配色必须放到 geo.regions
+    const regions = values
+      ? undefined
+      : features.map((f, i) => {
+          const name = (f.properties as { name: string }).name
+          return { name, itemStyle: { areaColor: regionColor(name, i) } }
+        })
 
     // 仅用于 tooltip 单位；图例由 LegendPanel 呈现，不再传入 ECharts visualMap
     const visualMap = values ? buildVisualMap(props.datasetId) : null
@@ -88,9 +96,10 @@ async function loadAndRender() {
         backgroundColor: 'transparent',
         tooltip: {
           trigger: 'item',
-          formatter: (params: { name: string; value?: number }) => {
+          formatter: (params: { name: string; value?: number | number[] }) => {
             const unit = visualMap?.unit ?? ''
-            return params.value != null
+            // 定位点（effectScatter）的 value 是 [lng, lat] 数组，不应作为数值展示
+            return typeof params.value === 'number'
               ? `${params.name}<br/>${ds.legend.label}: ${params.value}${unit}`
               : params.name
           },
@@ -102,7 +111,6 @@ async function loadAndRender() {
             geoIndex: 0,
             roam: false,
             selectedMode: 'single',
-            label: { show: true, fontSize: 11 },
             data: seriesData,
           },
           ...(props.locatePoint
@@ -121,7 +129,12 @@ async function loadAndRender() {
         geo: {
           map: mapName,
           roam: true,
+          // 标签来自 geo 区域模型（geoIndex 绑定下系列 label 被忽略）
+          label: { show: true, fontSize: 11 },
           ...(theme.echarts.mapRegion as Record<string, unknown>),
+          // 逐区域配色必须放在 geo.regions（geoIndex 绑定下系列 itemStyle 被忽略），
+          // 放在主题 spread 之后以防主题键覆盖
+          ...(regions ? { regions } : {}),
         },
       },
       { notMerge: true },
