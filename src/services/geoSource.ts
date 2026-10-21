@@ -4,6 +4,8 @@ import type { RegionMeta } from '../types'
 export interface GeoSource {
   /** 获取某 adcode 的子级 FeatureCollection（含缓存） */
   getChildren(adcode: number): Promise<GeoJSON.FeatureCollection>
+  /** 获取某 adcode 自身的边界 FeatureCollection（单 feature；仅省/市/区级有数据） */
+  getBoundary(adcode: number): Promise<GeoJSON.FeatureCollection>
   /** 读取搜索索引 */
   getIndex(): Promise<RegionMeta[]>
 }
@@ -23,6 +25,20 @@ export class LocalGeoSource implements GeoSource {
       })
       cache.set(key, p)
       // 失败时清掉缓存以便重试
+      p.catch(() => cache.delete(key))
+    }
+    return p
+  }
+
+  async getBoundary(adcode: number): Promise<GeoJSON.FeatureCollection> {
+    const key = `${adcode}_self`
+    let p = cache.get(key)
+    if (!p) {
+      p = fetch(`${this.baseUrl}/${adcode}.json`).then(async (res) => {
+        if (!res.ok) throw new Error(`加载 ${adcode} 边界失败: HTTP ${res.status}`)
+        return res.json()
+      })
+      cache.set(key, p)
       p.catch(() => cache.delete(key))
     }
     return p

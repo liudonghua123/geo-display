@@ -95,11 +95,22 @@ async function onSearchSelect(meta: RegionMeta) {
 }
 
 async function onLocate() {
-  const chain = await locate(100000)
+  const { chain, target } = await locate(100000)
   if (locateState.value === 'denied') return showToast('定位权限被拒绝，请在浏览器中允许定位')
   if (locateState.value === 'failed') return showToast('定位失败，请重试')
   if (!chain.length) return showToast('无法确定所在区域')
   goTo(0)
+  // 定位到命中区域的"自身边界"视图（如所在的区/市/省），并沿链重建面包屑
+  if (target) {
+    for (const node of chain) {
+      if (node.adcode === target.adcode) break
+      enter(node)
+    }
+    enter({ adcode: target.adcode, name: chain[chain.length - 1]!.name, level: target.level })
+    position.value = null // 定位点在自身边界视图内无意义（地图即所在区域）
+    showToast(`当前位于：${chain.map((n) => n.name).join(' › ')}`)
+    return
+  }
   for (const node of chain) enter(node)
   showToast(`当前位于：${chain.map((n) => n.name).join(' › ')}`)
 }

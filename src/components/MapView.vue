@@ -30,7 +30,7 @@ let renderSeq = 0
 const registeredMaps = new Set<string>()
 
 /** 当前视图层级 → 其子区域层级（点击的区域属于子级，路径节点应携带其自身层级） */
-const CHILD_LEVEL: Record<RegionNode['level'], RegionNode['level']> = {
+const CHILD_LEVEL: Record<RegionNode['level'], Exclude<RegionNode['level'], 'country'>> = {
   country: 'province',
   province: 'city',
   city: 'district',
@@ -75,7 +75,9 @@ async function loadAndRender() {
     const theme = getTheme(props.themeId)
     const features = fc.features.filter((f) => f.properties?.name)
     const ds = getDataset(props.datasetId)
-    const values = ds.getData(props.currentLevel === 'country' ? 'province' : props.currentLevel) as Record<number, number> | null
+    // getData 应传入"当前渲染要素"的层级（即 currentLevel 的子级）：
+    // currentLevel='province' 时渲染的是市，传入 'province' 会错用省级数据 → value 全为 NaN
+    const values = ds.getData(CHILD_LEVEL[props.currentLevel]) as Record<number, number> | null
 
     const seriesData = features.map((f) => {
       const p = f.properties as { adcode: number; name: string; childrenNum: number }
@@ -117,8 +119,10 @@ async function loadAndRender() {
           trigger: 'item',
           formatter: (params: { name: string; value?: number | number[] }) => {
             const unit = visualMap?.unit ?? ''
-            // 定位点（effectScatter）的 value 是 [lng, lat] 数组，不应作为数值展示
-            return typeof params.value === 'number'
+            // 定位点（effectScatter）的 value 是 [lng, lat] 数组；
+            // ECharts 会把缺失的数值维度填充为 NaN（typeof NaN === 'number'），
+            // 两者都不应作为数值展示
+            return Number.isFinite(params.value)
               ? `${params.name}<br/>${ds.legend.label}: ${params.value}${unit}`
               : params.name
           },

@@ -46,10 +46,10 @@ async function simplify(geojson) {
   return JSON.parse(output['out.json'])
 }
 
-/** 简化后写入 public/geo/{adcode}_full.json —— 所有 GeoJSON 均经此路径 */
-async function writeGeo(adcode, geojson) {
+/** 简化后写入 public/geo/{file}.json —— 所有 GeoJSON 均经此路径 */
+async function writeGeo(fileName, geojson) {
   const simplified = await simplify(geojson)
-  await writeFile(path.join(OUT_DIR, `${adcode}_full.json`), JSON.stringify(simplified))
+  await writeFile(path.join(OUT_DIR, `${fileName}.json`), JSON.stringify(simplified))
 }
 
 /** "浙江省"→"浙江"，"内蒙古自治区"→"内蒙古"，"香港特别行政区"→"香港" */
@@ -88,7 +88,7 @@ async function main() {
   console.log('1/3 抓取省级数据…')
   const country = await fetchJson(`${BASE}/100000_full.json`)
   const provinces = country.features.filter((f) => f.properties.name) // 过滤 100000_JD 占位
-  await writeGeo(100000, country)
+  await writeGeo('100000_full', country)
 
   console.log(`2/3 抓取 ${provinces.length} 个省的市级数据…`)
   const cityTasks = []
@@ -99,7 +99,10 @@ async function main() {
     cityTasks.push((async () => {
       const cities = await fetchJson(`${BASE}/${p.adcode}_full.json`)
       if (!cities) { skipped.push(`${p.name}(_full 404)`); return [] }
-      await writeGeo(p.adcode, cities)
+      await writeGeo(`${p.adcode}_full`, cities)
+      // 省级自身边界（定位跳转用）
+      const provSelf = await fetchJson(`${BASE}/${p.adcode}.json`)
+      if (provSelf) await writeGeo(`${p.adcode}`, provSelf)
       return cities.features.filter((f) => f.properties.name)
     })())
     await sleep(120) // 限速
@@ -113,12 +116,19 @@ async function main() {
       const c = city.properties
       index.push(toMeta(city, c.level ?? 'city', c.parent?.adcode ?? 0,
         provinces.find((x) => x.properties.adcode === c.parent?.adcode)?.properties.name ?? ''))
+      // 自身边界（定位跳转用，存为 {adcode}.json）：市级必抓
+      const selfFc = await fetchJson(`${BASE}/${c.adcode}.json`)
+      if (selfFc) await writeGeo(`${c.adcode}`, selfFc)
       if (c.childrenNum === 0) continue
       const districts = await fetchJson(`${BASE}/${c.adcode}_full.json`)
       if (!districts) { skipped.push(`${c.name}(_full 404)`); continue }
-      await writeGeo(c.adcode, districts)
+      await writeGeo(`${c.adcode}_full`, districts)
       for (const d of districts.features.filter((f) => f.properties.name)) {
         index.push(toMeta(d, 'district', c.adcode, c.name))
+        // 区级自身边界（叶子节点定位展示用）
+        const dSelf = await fetchJson(`${BASE}/${d.properties.adcode}.json`)
+        if (dSelf) await writeGeo(`${d.properties.adcode}`, dSelf)
+        await sleep(60) // 限速
       }
       await sleep(60) // 限速
     }
