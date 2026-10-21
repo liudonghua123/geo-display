@@ -13,7 +13,7 @@ export interface RegionMeta {
   pinyinInitials: string
   level: Exclude<Level, 'country'>
   parentAdcode: number | null
-  /** 祖先名称链，用于下拉展示上下文，如 ["浙江省"] */
+  /** 直接父级名称，用于下拉展示上下文，如 ["浙江省"] */
   path: string[]
 }
 
