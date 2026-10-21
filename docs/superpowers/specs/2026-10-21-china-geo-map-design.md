@@ -14,7 +14,8 @@
 - **地图渲染**：ECharts 5（`registerMap` + map series / geo 组件）
 - **状态管理**：轻量 composables（`useMap`、`useSearch`、`useTheme`、`useDrilldown`），不引入 Pinia
 - **测试**：Vitest（核心逻辑单元测试）
-- **无其他运行时依赖**（拼音搜索自行实现小型转换表，不引大型拼音库）
+- **拼音**：构建期由 `scripts/fetch-geo.mjs` 使用 devDependency `pinyin-pro` 预生成，写入静态搜索索引；运行时零拼音依赖
+- **数据简化**：抓取脚本使用 `mapshaper`（devDependency）对 GeoJSON 做拓扑保持简化（15%），控制打包体积
 
 ## 3. 数据层
 
