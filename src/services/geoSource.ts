@@ -51,7 +51,9 @@ export class LocalGeoSource implements GeoSource {
   }
 }
 
-export const geoSource: GeoSource = new LocalGeoSource()
+export const geoSource: GeoSource = new LocalGeoSource(
+  `${import.meta.env.BASE_URL}geo`.replace(/\/{2,}/g, '/'),
+)
 
 /** 判断某 feature 是否可下钻：以 DataV 的 childrenNum 为准 */
 export function canDrillDown(childrenNum: number | undefined): boolean {

@@ -16,10 +16,27 @@ npm run dev         # 开发
 ## 部署
 
 ```bash
-npm run build       # 产出 dist/
+npm run build       # 产出 dist/（默认 base=/）
 ```
 
 把 `dist/` 部署到任意静态服务器即可（数据在 `dist/geo/`）。
+
+### 部署到子路径
+
+应用支持设置 base URL（默认 `.`/根路径）。子路径部署二选一：
+
+```bash
+# 方式一：环境变量
+BASE_URL=/geo-display/ npm run build
+
+# 方式二：命令行参数
+npx vite build --base /geo-display/
+```
+
+推送 main 分支会自动通过 GitHub Actions（`.github/workflows/deploy.yml`）
+发布到 GitHub Pages 项目页（`https://<user>.github.io/<repo>/`），
+workflow 会按仓库名自动设置 base。首次启用需在仓库
+Settings → Pages 中把 Source 设为 `gh-pages` 分支。
 
 ## 数据说明
 
