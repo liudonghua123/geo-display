@@ -88,12 +88,23 @@ async function loadAndRender() {
           return { name, itemStyle: { areaColor: regionColor(name, i) } }
         })
 
-    // 仅用于 tooltip 单位；图例由 LegendPanel 呈现，不再传入 ECharts visualMap
+    // 仅用于 tooltip 单位；图例由 LegendPanel 呈现，
+    // values 模式下用隐藏的 piecewise visualMap 驱动分档填色
     const visualMap = values ? buildVisualMap(props.datasetId) : null
 
     chart.setOption(
       {
         backgroundColor: 'transparent',
+        ...(visualMap
+          ? {
+              visualMap: {
+                show: false,
+                type: 'piecewise' as const,
+                seriesIndex: 0,
+                pieces: visualMap.pieces,
+              },
+            }
+          : {}),
         tooltip: {
           trigger: 'item',
           formatter: (params: { name: string; value?: number | number[] }) => {
