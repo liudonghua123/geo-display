@@ -9,8 +9,14 @@
 
 ```bash
 npm install
-npm run fetch-geo   # 首次运行：抓取全精度 GeoJSON 数据（约 5-10 分钟）
-npm run dev         # 开发
+npm run setup      # 从仓库自带 data.zip 解压地图数据（无需联网，秒级）
+npm run dev        # 开发
+```
+
+`setup` 默认使用仓库打包的 `data.zip`；加 `--download` 重新联网抓取最新数据：
+
+```bash
+npm run setup -- --download   # 重新抓取（约 5-10 分钟）
 ```
 
 ## 部署
@@ -35,15 +41,18 @@ npx vite build --base /geo-display/
 
 推送 main 分支会自动通过 GitHub Actions（`.github/workflows/deploy.yml`）
 发布到 GitHub Pages 项目页（`https://<user>.github.io/<repo>/`），
-workflow 会按仓库名自动设置 base，并在 CI 中重新抓取 GeoJSON 数据
-（首次构建约 10 分钟）。首次启用需在仓库
+workflow 会按仓库名自动设置 base，数据直接使用仓库自带的 `data.zip`
+（构建约 1-2 分钟）。首次启用需在仓库
 Settings → Pages 中把 Source 设为 `gh-pages` 分支。
 
 ## 数据说明
 
+- 仓库自带 `data.zip`（全精度 GeoJSON 打包，约 28 MB），
+  `npm run setup` 解压到 `public/geo/` 即可使用
 - 数据源：阿里云 DataV GeoAtlas（`geo.datav.aliyun.com`），默认全精度（不简化）
+- 重新联网抓取：`npm run setup -- --download`（或直接 `npm run fetch-geo`）
+- 数据变更后重新打包提交：`npm run pack-data`（生成/更新 `data.zip`）
 - 需要减小体积时可用 `node scripts/fetch-geo.mjs --simplify 15`（边界会失真）
-- 更新数据：重跑 `npm run fetch-geo`
 - 台湾省与部分省直辖县级市无下钻数据（源数据限制），界面上点击仅提示
 
 ## 技术栈
@@ -56,3 +65,5 @@ Vite · Vue 3 · TypeScript · ECharts 5 · Vitest
 - `src/datasets/providers.ts` — DatasetProvider 接口（着色数据可扩展）
 - `src/themes/` — 主题对（CSS 变量 + ECharts 主题），新增主题只需注册一组
 - `scripts/fetch-geo.mjs` — 数据抓取 / 搜索索引生成（可选 `--simplify` 简化）
+- `scripts/pack-data.mjs` — 把 `public/geo/` 打包为 `data.zip`（提交到仓库）
+- `scripts/setup-data.mjs` — 数据准备：默认解压 `data.zip`，`--download` 联网重抓

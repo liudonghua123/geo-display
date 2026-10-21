@@ -8,6 +8,8 @@
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "fetch-geo": "node scripts/fetch-geo.mjs",
+    "setup": "node scripts/setup-data.mjs",
+    "pack-data": "node scripts/pack-data.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -19,6 +21,7 @@
     "@types/geojson": "^7946.0.16",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/test-utils": "^2.4.6",
+    "fflate": "^0.8.3",
     "jsdom": "^25.0.1",
     "mapshaper": "^0.6.102",
     "ora": "^9.4.1",

@@ -4,3 +4,4 @@ dist
 public/geo
 *.local
 tsconfig.tsbuildinfo
+!data.zip
