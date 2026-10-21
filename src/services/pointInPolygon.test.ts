@@ -19,6 +19,15 @@ describe('pointInPolygon', () => {
     expect(pointInPolygon([10, 10], square)).toBe(true)
   })
 
+  it('x 在范围内但 y 在多边形外的点返回 false（水平边误判回归）', () => {
+    expect(pointInPolygon([5, 30], square)).toBe(false)
+    expect(pointInPolygon([5, -5], square)).toBe(false)
+  })
+
+  it('水平边上的点返回 true', () => {
+    expect(pointInPolygon([5, 0], square)).toBe(true)
+  })
+
   it('支持 MultiPolygon', () => {
     const multi = { type: 'MultiPolygon' as const, coordinates: [
       [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],

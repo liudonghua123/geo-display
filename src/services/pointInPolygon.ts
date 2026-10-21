@@ -13,7 +13,7 @@ function inRing(pt: [number, number], ring: Ring): boolean {
     const [xi, yi] = ring[i]
     const [xj, yj] = ring[j]
     // 顶点/边上的点
-    if ((xi === x && yi === y) || (yj === yi && Math.min(xj, xi) <= x && x <= Math.max(xj, xi))) return true
+    if ((xi === x && yi === y) || (yj === yi && yi === y && Math.min(xj, xi) <= x && x <= Math.max(xj, xi))) return true
     const intersect = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi
     if (intersect) inside = !inside
   }
@@ -38,7 +38,11 @@ interface FeatureLike {
   geometry: Geometry | null
 }
 
-/** 在 FeatureCollection 中找出包含该点的 feature */
+// 已知局限：点恰好在两个区域的非水平共享边界上时，两侧都返回 false → findRegionAt 返回 null，调用方按"无法定位"降级处理即可。
+
+/**
+ * 在 FeatureCollection 中找出包含该点的 feature
+ */
 export function findRegionAt<T extends FeatureLike>(
   geojson: { features: T[] },
   pt: [number, number],
