@@ -5,6 +5,7 @@
       :current-level="current.level"
       :theme-id="themeId"
       :dataset-id="datasetId"
+      :locate-point="position"
       @region-click="onRegionClick"
     />
 
@@ -46,7 +47,7 @@ import type { RegionMeta, RegionNode } from './types'
 const { path, current, enter, goTo } = useDrilldown()
 const { themeId } = useTheme()
 const datasetId = ref('default')
-const { state: locateState, locate } = useLocator()
+const { state: locateState, position, locate } = useLocator()
 const toast = ref('')
 let toastTimer: ReturnType<typeof setTimeout> | undefined
 

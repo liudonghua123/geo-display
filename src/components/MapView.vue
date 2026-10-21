@@ -15,6 +15,8 @@ const props = defineProps<{
   currentLevel: RegionNode['level']
   themeId: string
   datasetId: string
+  /** 定位点经纬度（[lng, lat]），null 表示无定位标记 */
+  locatePoint?: [number, number] | null
 }>()
 
 const emit = defineEmits<{
@@ -97,13 +99,30 @@ async function loadAndRender() {
           {
             type: 'map',
             map: mapName,
-            roam: true,
+            geoIndex: 0,
+            roam: false,
             selectedMode: 'single',
             label: { show: true, fontSize: 11 },
             data: seriesData,
-            ...(theme.echarts.mapRegion as Record<string, unknown>),
           },
+          ...(props.locatePoint
+            ? [{
+                type: 'effectScatter' as const,
+                coordinateSystem: 'geo' as const,
+                geoIndex: 0,
+                zlevel: 2,
+                symbolSize: 10,
+                rippleEffect: { scale: 3 },
+                itemStyle: { color: '#ff4d4f' },
+                data: [{ value: props.locatePoint, name: '当前位置' }],
+              }]
+            : []),
         ],
+        geo: {
+          map: mapName,
+          roam: true,
+          ...(theme.echarts.mapRegion as Record<string, unknown>),
+        },
       },
       { notMerge: true },
     )
@@ -131,7 +150,7 @@ onMounted(async () => {
 })
 
 watch(
-  () => [props.currentAdcode, props.themeId, props.datasetId],
+  () => [props.currentAdcode, props.themeId, props.datasetId, props.locatePoint],
   () => {
     void loadAndRender()
   },
