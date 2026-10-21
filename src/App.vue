@@ -59,7 +59,13 @@ function showToast(msg: string) {
 
 /** 点击区域下钻（叶子节点不下钻） */
 async function onRegionClick(node: RegionNode) {
-  const fc = await geoSource.getChildren(current.value.adcode)
+  let fc: GeoJSON.FeatureCollection
+  try {
+    fc = await geoSource.getChildren(current.value.adcode)
+  } catch {
+    showToast(`加载 ${current.value.name} 下级数据失败`)
+    return
+  }
   const hit = fc.features.find(
     (f) => (f.properties as { adcode: number }).adcode === node.adcode,
   )

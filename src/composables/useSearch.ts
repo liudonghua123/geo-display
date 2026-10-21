@@ -22,8 +22,10 @@ export function useSearch() {
     }
   }
 
-  function onInput(value: string) {
+  async function onInput(value: string) {
     query.value = value
+    // 索引缺失时重试加载（初次加载失败后可恢复）
+    await ensureIndex()
     clearTimeout(timer)
     timer = setTimeout(() => {
       results.value = queryIndex(index.value, query.value).slice(0, 12)

@@ -5,7 +5,7 @@
       type="text"
       :value="query"
       placeholder="搜索省 / 市 / 区县 / 拼音 / 首字母…"
-      @input="onInput(($event.target as HTMLInputElement).value)"
+      @input="onInput(($event.target as HTMLInputElement).value).catch(() => {})"
       @focus="focused = true"
       @blur="focused = false"
       @keydown.esc="clear"
@@ -37,7 +37,7 @@ function select(r: RegionMeta) {
 }
 
 function clear() {
-  onInput('')
+  void onInput('')
   results.value = []
 }
 </script>

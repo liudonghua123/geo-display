@@ -29,6 +29,14 @@ let renderSeq = 0
 /** 已向 ECharts 注册过的地图名，避免重复注册 */
 const registeredMaps = new Set<string>()
 
+/** 当前视图层级 → 其子区域层级（点击的区域属于子级，路径节点应携带其自身层级） */
+const CHILD_LEVEL: Record<RegionNode['level'], RegionNode['level']> = {
+  country: 'province',
+  province: 'city',
+  city: 'district',
+  district: 'district', // 区县级为叶子，仅兜底
+}
+
 function regionColor(name: string, index: number): string {
   if (props.datasetId === 'default') {
     return PALETTE[index % PALETTE.length]!
@@ -167,7 +175,7 @@ onMounted(async () => {
     // ECharts 会为数据中缺失的区域（如九段线）自动生成仅含 name 的条目，
     // 此时 adcode 为 undefined，不应触发下钻
     if (d && typeof d.adcode === 'number')
-      emit('regionClick', { adcode: d.adcode, name: params.name ?? '', level: props.currentLevel })
+      emit('regionClick', { adcode: d.adcode, name: params.name ?? '', level: CHILD_LEVEL[props.currentLevel] })
   })
   window.addEventListener('resize', handleResize)
   await loadAndRender()
