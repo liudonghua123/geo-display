@@ -37,7 +37,7 @@ function select(r: RegionMeta) {
 }
 
 function clear() {
-  void onInput('')
+  onInput('').catch(() => {})
   results.value = []
 }
 </script>
