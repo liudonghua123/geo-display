@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * 抓取阿里云 DataV GeoAtlas 行政区划边界数据，简化后写入 public/geo/。
+ * 抓取阿里云 DataV GeoAtlas 行政区划边界数据（默认全精度），写入 public/geo/。
  * 同时生成搜索索引 search-index.json 与清单 manifest.json。
  *
- * 用法: npm run fetch-geo [-- --keep-full]
- *   --keep-full  跳过 mapshaper 简化（调试用）
+ * 用法: npm run fetch-geo [-- --simplify <百分比>]
+ *   --simplify 15  用 mapshaper 简化到 15%（体积敏感时选用，边界会失真）
  */
 import { mkdir, writeFile, readdir, rm } from 'node:fs/promises'
 import path from 'node:path'
@@ -15,7 +15,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const OUT_DIR = path.join(ROOT, 'public', 'geo')
 const BASE = 'https://geo.datav.aliyun.com/areas_v3/bound'
-const SIMPLIFY_PCT = process.argv.includes('--keep-full') ? 1 : 0.15
+const simplifyArg = process.argv.indexOf('--simplify')
+const SIMPLIFY_PCT = simplifyArg !== -1 ? Number(process.argv[simplifyArg + 1]) / 100 : 1
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -81,7 +82,7 @@ async function main() {
   await rm(OUT_DIR, { recursive: true, force: true }) // 清理上次输出，避免污染 manifest
   await mkdir(OUT_DIR, { recursive: true })
   const index = []
-  const manifest = { generatedAt: new Date().toISOString(), simplified: SIMPLIFY_PCT, files: {} }
+  const manifest = { generatedAt: new Date().toISOString(), simplified: SIMPLIFY_PCT < 1 ? SIMPLIFY_PCT : null, files: {} }
   const skipped = []
 
   console.log('1/3 抓取省级数据…')
