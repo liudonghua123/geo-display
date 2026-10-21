@@ -6,7 +6,7 @@
  * 用法: npm run fetch-geo [-- --keep-full]
  *   --keep-full  跳过 mapshaper 简化（调试用）
  */
-import { mkdir, writeFile, readdir } from 'node:fs/promises'
+import { mkdir, writeFile, readdir, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pinyin } from 'pinyin-pro'
@@ -53,11 +53,13 @@ async function writeGeo(adcode, geojson) {
 
 /** "浙江省"→"浙江"，"内蒙古自治区"→"内蒙古"，"香港特别行政区"→"香港" */
 function shortName(name) {
-  return name
+  const stripped = name
     .replace(/(省|市|特别行政区)$/, '')
     .replace(/^(黑龙江|内蒙古|广西|西藏|宁夏|新疆)(维吾尔|壮族|回族|自治区|)/, '$1')
     .replace(/(自治区|自治州|地区|盟|林区)$/, '')
     .replace(/市$/, '')
+  // 避免退化短名（津市市→津、芒市→芒、北林区→北），至少保留 2 字
+  return stripped.length >= 2 ? stripped : name
 }
 
 function toMeta(feature, level, parentAdcode, parentName) {
@@ -67,8 +69,8 @@ function toMeta(feature, level, parentAdcode, parentName) {
     adcode,
     name,
     shortName: shortName(name),
-    fullPinyin: full.join('').toLowerCase(),
-    pinyinInitials: pinyin(name, { pattern: 'first', toneType: 'none', type: 'array', nonZh: 'consecutive' }).join('').toLowerCase(),
+    fullPinyin: full.join('').toLowerCase().replaceAll('ü', 'v'), // ü→v，支持键盘输入"lv"
+    pinyinInitials: pinyin(name, { pattern: 'first', toneType: 'none', type: 'array', nonZh: 'consecutive' }).join('').toLowerCase().replaceAll('ü', 'v'),
     level,
     parentAdcode,
     path: parentName ? [parentName] : [],
@@ -76,6 +78,7 @@ function toMeta(feature, level, parentAdcode, parentName) {
 }
 
 async function main() {
+  await rm(OUT_DIR, { recursive: true, force: true }) // 清理上次输出，避免污染 manifest
   await mkdir(OUT_DIR, { recursive: true })
   const index = []
   const manifest = { generatedAt: new Date().toISOString(), simplified: SIMPLIFY_PCT, files: {} }
@@ -107,7 +110,7 @@ async function main() {
   for (const cities of provinceCityPairs) {
     for (const city of cities) {
       const c = city.properties
-      index.push(toMeta(city, 'city', c.parent?.adcode ?? 0,
+      index.push(toMeta(city, c.level ?? 'city', c.parent?.adcode ?? 0,
         provinces.find((x) => x.properties.adcode === c.parent?.adcode)?.properties.name ?? ''))
       if (c.childrenNum === 0) continue
       const districts = await fetchJson(`${BASE}/${c.adcode}_full.json`)
@@ -116,6 +119,7 @@ async function main() {
       for (const d of districts.features.filter((f) => f.properties.name)) {
         index.push(toMeta(d, 'district', c.adcode, c.name))
       }
+      await sleep(60) // 限速
     }
     done++
     if (done % 10 === 0) console.log(`  ${done}/${provinceCityPairs.length}`)
