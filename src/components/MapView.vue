@@ -8,6 +8,7 @@ import * as echarts from 'echarts'
 import { geoSource } from '../services/geoSource'
 import { getTheme } from '../themes'
 import { getDataset, buildVisualMap, colorForRegion, PALETTE } from '../datasets/providers'
+import { showLabels } from '../composables/useLabels'
 import type { RegionNode } from '../types'
 
 const props = defineProps<{
@@ -134,6 +135,9 @@ async function loadAndRender() {
             geoIndex: 0,
             roam: false,
             selectedMode: 'single',
+            // 移动端双指缩放：progressive 分片渲染避免长任务卡帧
+            progressive: 400,
+            progressiveThreshold: 800,
             data: seriesData,
           },
           ...(props.locatePoint
@@ -152,9 +156,19 @@ async function loadAndRender() {
         geo: {
           map: mapName,
           roam: true,
-          // 标签来自 geo 区域模型（geoIndex 绑定下系列 label 被忽略）
-          label: { show: true, fontSize: 11 },
+          // 移动端双指缩放流畅度：关闭动画与缩放限制，滚轮缩放灵敏度降低
+          zoomOnMouseWheel: false,
+          scaleLimit: undefined,
+          animation: false,
           ...(theme.echarts.mapRegion as Record<string, unknown>),
+          // 标签来自 geo 区域模型（geoIndex 绑定下系列 label 被忽略）。
+          // 必须放在主题 spread 之后：主题的 mapRegion.label（颜色）会整体
+          // 覆盖 label 对象，这里合并主题颜色并保留 show 开关
+          label: {
+            ...((theme.echarts.mapRegion as { label?: object } | undefined)?.label ?? {}),
+            show: showLabels.value,
+            fontSize: 11,
+          },
           // 逐区域配色必须放在 geo.regions（geoIndex 绑定下系列 itemStyle 被忽略），
           // 放在主题 spread 之后以防主题键覆盖
           ...(regions ? { regions } : {}),
@@ -167,8 +181,14 @@ async function loadAndRender() {
   }
 }
 
-function handleResize() {
-  chart?.resize()
+/** 双指缩放时高频 resize：rAF 节流，每帧至多执行一次 */
+let resizeRaf = 0
+function scheduleResize() {
+  if (resizeRaf) return
+  resizeRaf = requestAnimationFrame(() => {
+    resizeRaf = 0
+    chart?.resize()
+  })
 }
 
 onMounted(async () => {
@@ -181,19 +201,23 @@ onMounted(async () => {
     if (d && typeof d.adcode === 'number')
       emit('regionClick', { adcode: d.adcode, name: params.name ?? '', level: CHILD_LEVEL[props.currentLevel] })
   })
-  window.addEventListener('resize', handleResize)
+  window.addEventListener('resize', scheduleResize, { passive: true })
+  // iOS Safari 双指缩放/旋转不触发 window resize，需监听 visualViewport
+  window.visualViewport?.addEventListener('resize', scheduleResize, { passive: true })
   await loadAndRender()
 })
 
 watch(
-  () => [props.currentAdcode, props.themeId, props.datasetId, props.locatePoint],
+  () => [props.currentAdcode, props.themeId, props.datasetId, props.locatePoint, showLabels.value],
   () => {
     void loadAndRender()
   },
 )
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', handleResize)
+  window.removeEventListener('resize', scheduleResize)
+  window.visualViewport?.removeEventListener('resize', scheduleResize)
+  if (resizeRaf) cancelAnimationFrame(resizeRaf)
   renderSeq++ // 使在途请求过期
   chart?.dispose()
   chart = null

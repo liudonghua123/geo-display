@@ -24,9 +24,12 @@ defineEmits<{ home: []; locate: [] }>()
   font-size: 17px;
   cursor: pointer;
   box-shadow: var(--shadow);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(16px) saturate(1.6);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  transition: transform 0.15s ease, border-color 0.2s;
 }
 .action-btn:hover:not(:disabled) { border-color: var(--accent); }
+.action-btn:active:not(:disabled) { transform: scale(0.92); }
 .action-btn:disabled { opacity: 0.45; cursor: default; }
 
 @media (max-width: 767px) {

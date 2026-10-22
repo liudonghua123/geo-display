@@ -1,8 +1,9 @@
 import type { ThemeDef } from '../types'
-import { darkTheme } from './dark'
 import { lightTheme } from './light'
+import { darkTheme } from './dark'
 
-export const THEMES: ThemeDef[] = [darkTheme, lightTheme]
+// 浅色在前：getTheme 兜底返回第一项，保证默认主题为 light
+export const THEMES: ThemeDef[] = [lightTheme, darkTheme]
 
 export function getTheme(id: string): ThemeDef {
   return THEMES.find((t) => t.id === id) ?? THEMES[0]!

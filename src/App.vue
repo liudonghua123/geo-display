@@ -1,5 +1,6 @@
 <template>
   <div class="app">
+    <AuroraBackground />
     <MapView
       :current-adcode="current.adcode"
       :current-level="current.level"
@@ -33,6 +34,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import MapView from './components/MapView.vue'
+import AuroraBackground from './components/AuroraBackground.vue'
 import SearchBox from './components/SearchBox.vue'
 import Breadcrumb from './components/Breadcrumb.vue'
 import ControlBar from './components/ControlBar.vue'
@@ -122,7 +124,9 @@ onMounted(() => {
 
 <style>
 :root {
-  font-family: 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC',
+    'Microsoft YaHei', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 .app {
   position: relative;
@@ -132,6 +136,19 @@ onMounted(() => {
   background: var(--bg);
   color: var(--text);
   overflow: hidden;
+}
+/* 苹果风格标题：SF 系字体栈 + 大字号 + 渐变文字 */
+.title {
+  margin: 6px 0 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC',
+    'Microsoft YaHei', system-ui, sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  background: linear-gradient(120deg, #ff6ec4 0%, #a78bfa 45%, #4facfe 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 .top-bar {
   position: absolute;
@@ -179,11 +196,12 @@ onMounted(() => {
   left: 50%;
   transform: translateX(-50%);
   padding: 8px 18px;
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(16px) saturate(1.6);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
   font-size: 13px;
   z-index: 30;
 }
@@ -198,5 +216,4 @@ onMounted(() => {
   .top-left { width: 100%; }
   .top-left :first-child { width: 100%; }
   .top-bar { flex-wrap: wrap; }
-}
-</style>
+}</style>

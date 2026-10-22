@@ -12,6 +12,7 @@ export const darkTheme: ThemeDef = {
     '--accent': '#00c8ff',
     '--hover': 'rgba(0, 200, 255, 0.15)',
     '--shadow': '0 4px 20px rgba(0, 0, 0, 0.5)',
+    '--aurora-opacity': '0.3',
   },
   echarts: {
     backgroundColor: 'transparent',
