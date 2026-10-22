@@ -156,10 +156,17 @@ async function loadAndRender() {
         geo: {
           map: mapName,
           roam: true,
-          // 移动端双指缩放流畅度：关闭动画与缩放限制，滚轮缩放灵敏度降低
+          // 移动端双指缩放流畅度：关闭缩放限制，滚轮缩放灵敏度降低
           zoomOnMouseWheel: false,
           scaleLimit: undefined,
-          animation: false,
+          // hover 高亮过渡动画：区域"浮起"的抬升过程
+          emphasisDisabled: false,
+          emphasis: {
+            focus: 'none',
+            // itemStyle/label 过渡时长（浮起 0.18s，回落 0.3s 更柔和）
+            transitionDuration: 0.18,
+            transitionDurationUpdate: 0.3,
+          },
           ...(theme.echarts.mapRegion as Record<string, unknown>),
           // 标签来自 geo 区域模型（geoIndex 绑定下系列 label 被忽略）。
           // 必须放在主题 spread 之后：主题的 mapRegion.label（颜色）会整体

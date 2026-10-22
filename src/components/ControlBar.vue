@@ -10,9 +10,19 @@
       <span class="track"><span class="thumb" /></span>
       <span class="toggle-text">标签</span>
     </label>
-    <select class="control-select" :value="themeId" aria-label="主题" @change="$emit('update:themeId', ($event.target as HTMLSelectElement).value)">
-      <option v-for="t in themes" :key="t.id" :value="t.id">{{ t.name }}</option>
-    </select>
+    <label class="theme-toggle" title="切换浅色/深色主题">
+      <input
+        type="checkbox"
+        :checked="isDark"
+        aria-label="切换浅色/深色主题"
+        @change="$emit('update:themeId', ($event.target as HTMLInputElement).checked ? 'dark' : 'light')"
+      />
+      <span class="track">
+        <span class="thumb">
+          <span class="icon">{{ isDark ? '🌙' : '☀️' }}</span>
+        </span>
+      </span>
+    </label>
     <select class="control-select" :value="datasetId" aria-label="着色模式" @change="$emit('update:datasetId', ($event.target as HTMLSelectElement).value)">
       <option v-for="d in datasets" :key="d.id" :value="d.id">{{ d.name }}</option>
     </select>
@@ -20,15 +30,17 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { THEMES } from '../themes'
 import { DATASETS } from '../datasets/providers'
 import { showLabels } from '../composables/useLabels'
 
-defineProps<{ themeId: string; datasetId: string }>()
+const props = defineProps<{ themeId: string; datasetId: string }>()
 defineEmits<{ 'update:themeId': [v: string]; 'update:datasetId': [v: string] }>()
 
-const themes = THEMES
 const datasets = DATASETS
+/** 深色主题在 THEMES 中是否为第二项（light 在前） */
+const isDark = computed(() => props.themeId === (THEMES[1]?.id ?? 'dark'))
 </script>
 
 <style scoped>
@@ -89,7 +101,57 @@ const datasets = DATASETS
   transition: transform 0.2s ease;
 }
 .toggle input:checked + .track { background: var(--accent); }
-.toggle input:checked + .track .thumb { transform: translateX(12px); }
-.toggle input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* 主题切换：iOS 风格开关（太阳/月亮） */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px) saturate(1.6);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  cursor: pointer;
+  user-select: none;
+}
+.theme-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.theme-toggle .track {
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #fbbf24, #f59e0b);
+  position: relative;
+  transition: background 0.25s;
+  flex-shrink: 0;
+}
+.theme-toggle input:checked + .track {
+  background: linear-gradient(120deg, #3b82f6, #6366f1);
+}
+.theme-toggle .thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  line-height: 1;
+}
+.theme-toggle input:checked + .track .thumb { transform: translateX(14px); }
+.theme-toggle input:focus-visible + .track {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 .toggle-text { font-size: 12px; color: var(--text); }
 </style>

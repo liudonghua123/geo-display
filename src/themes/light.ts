@@ -26,12 +26,14 @@ export const lightTheme: ThemeDef = {
         borderWidth: 1,
       },
       emphasis: {
-        label: { color: '#1d1d1f' },
+        label: { color: '#1d1d1f', fontWeight: 'bold' },
         itemStyle: {
           areaColor: '#bfe0ff',
           borderColor: '#0071e3',
-          shadowBlur: 12,
-          shadowColor: 'rgba(0, 113, 227, 0.35)',
+          // 下沉投影 + 提亮：模拟区域沿 z 轴抬起的悬浮感
+          shadowColor: 'rgba(15, 40, 80, 0.4)',
+          shadowBlur: 30,
+          shadowOffsetY: 16,
         },
       },
       select: {

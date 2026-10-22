@@ -145,10 +145,12 @@ onMounted(() => {
   font-size: 19px;
   font-weight: 700;
   letter-spacing: 3px;
-  background: linear-gradient(120deg, #ff6ec4 0%, #a78bfa 45%, #4facfe 100%);
+  /* 霓虹渐变文字 + 深色辉光：与极光背景呼应，深浅主题均清晰 */
+  background: linear-gradient(120deg, #22d3ee 0%, #a78bfa 50%, #f472b6 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  filter: drop-shadow(0 0 12px rgba(34, 211, 238, 0.35));
 }
 .top-bar {
   position: absolute;
@@ -214,6 +216,6 @@ onMounted(() => {
 @media (max-width: 767px) {
   .top-bar { padding: 10px 12px; }
   .top-left { width: 100%; }
-  .top-left :first-child { width: 100%; }
+  .top-left > :first-child { width: 100%; }
   .top-bar { flex-wrap: wrap; }
 }</style>
